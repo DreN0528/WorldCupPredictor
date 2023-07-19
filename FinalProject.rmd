@@ -1,0 +1,192 @@
+---
+title: "World Cup Model"
+Author: "Andre Nesbit and Anya Raghuvanshi"
+output: html_document
+date: "2022-16-10"
+---
+
+
+
+```{r warning= FALSE, message=FALSE, message=FALSE, echo=FALSE}
+library(readr)
+library(igraph)
+library (tidyverse)
+library(ggplot2)
+library(dplyr)
+`%!in%` <- Negate(`%in%`)
+```
+
+```{r warning= FALSE, message=FALSE, message=FALSE, echo=FALSE}
+#Loading in .csv file and wrangling data sets
+
+player_stats <- read_csv("https://raw.githubusercontent.com/econ122-f22/finalproject-worldcup2022/main/player_stats.csv?token=GHSAT0AAAAAAB4G7YYUYOKNAI72EH54UATCY45FDWA")
+
+Premier_League_Teams <- c("Bournemouth", "Arsenal", "Aston Villa", "Brentford", "Brighton", "Chelsea", "Crystal Palace",
+  "Everton", "Fulham", "Leeds United", "Leicester City", "Liverpool", "Manchester City", "Manchester Utd", "Newcastle Utd",
+  "Nott'ham Forest", "Southampton", "Tottenham", "West Ham", "Wolves")
+
+La_Liga_Teams <- c("Almería", "Athletic Club", "Atlético Madrid", "Barcelona", "Betis", "Cádiz", "Espanyol", "Getafe", "Mallorca", "Osasuna", "Rayo Vallecano", "Real Madrid", "Real Sociedad", "Sevilla",
+  "Valencia", "Valladolid", "Villarreal")
+
+Bundesliga_Teams <- c("Bayern Munich", "RB Leipzig", "Dortmund", "Wolfsburg", "Eint Frankfurt","Leverkusen", "M'Gladbach", "Stuttgart", "Freiburg", "Hoffenheim", "Mainz 05", "Augsburg", "Schalke 04",
+  "Bochum", "Werder Bremen")
+
+Serie_A_Teams <- c("Napoli", "Milan", "Atalanta", "Roma", "Udinese", 
+  "Torino", "Fiorentina", "Bologna", "Salernitana", "Hellas Verona")
+
+Ligue_Teams <- c("Ajax", "Angers", "Auxerre", "Clermont Foot", "Lens", "Lille", "Lorient", "Lyon", "Marseille", "Monaco", "Montpellier", "Nantes", "Paris S-G",
+           "Rennes", "Reims", "Toulouse", "Troyes")
+
+FIFA_players <-  subset(player_stats, select = c("team", "club", "player")) #selecting rows that will be included in our model
+
+top_teams <- FIFA_players %>%
+  filter(club %in% c(Premier_League_Teams, Bundesliga_Teams, La_Liga_Teams, Serie_A_Teams, Ligue_Teams)) # Taking the teams that our only in the leagues selected
+
+
+#Creating new column to determine which club is in each league
+
+league <- c(1:nrow(top_teams))
+
+
+top_teams <- top_teams %>% cbind(league)
+
+for(i in 1:nrow(top_teams)){
+  if (top_teams[i,2] %in% Premier_League_Teams){
+    top_teams[i,4] <- "Premier League"
+  } else if (top_teams[i,2] %in% La_Liga_Teams){
+    top_teams[i,4] <- "La Liga"
+  } else if (top_teams[i,3] %in% Bundesliga_Teams){
+    top_teams[i,4] <- "Bundesliga"
+  } else if(top_teams[i,3] %in% Ligue_Teams){
+      top_teams[i,4] <- "Ligue"
+  } else {
+    top_teams[i,4] <- "Serie A"
+  }
+}
+
+# Creating dataframes of the data that only include the respective league
+Liga <- top_teams %>% filter (club %in% La_Liga_Teams)  
+Bundesliga <- top_teams %>% filter (club %in% Bundesliga_Teams)
+Premier <- top_teams %>% filter (club %in% Premier_League_Teams)
+Ita <- top_teams %>% filter (club %in% Serie_A_Teams)
+Ligue <- top_teams %>% filter (club %in% Ligue_Teams)
+
+num_of_players <- data.frame(table(top_teams$team))
+names(num_of_players)[2] = "# players"
+num_in_LL <- data.frame(table(Liga$team))
+names(num_in_LL)[2] = "# LL" 
+num_in_BL <- data.frame(table(Bundesliga$team))
+names(num_in_BL)[2] = "# BL"
+num_in_SA <- data.frame(table(Ita$team))
+names(num_in_SA)[2] = "# SA"
+num_in_PL <- data.frame(table(Premier$team))
+names(num_in_PL)[2] = "# PL"
+num_in_L <- data.frame(table(Ligue$team))
+names(num_in_L)[2] = "# L"
+
+num_of_players <- num_of_players %>% left_join(num_in_LL) %>% left_join(num_in_BL) %>% left_join(num_in_PL) %>% left_join(num_in_SA) %>% left_join(num_in_L)
+
+#Taking the top 10 national teams with the most amount of players in the respective league
+L10 <- num_of_players[order(-num_of_players$`# L`),] %>% head(10)
+LL10 <- num_of_players[order(-num_of_players$`# LL`),] %>% head(10)
+PL10 <- num_of_players[order(-num_of_players$`# PL`),] %>% head(10)
+BL10 <- num_of_players[order(-num_of_players$`# BL`),] %>% head(10)
+SA10 <- num_of_players[order(-num_of_players$`# SA`),] %>% head(10)
+
+Num10 <- num_of_players[order(-num_of_players$`# players`),] %>% head(10)
+```
+Overview
+
+The FIFA Men's World Cup takes place quadrennially wherein 32 nations compete against each other for the coveted title of the world cup winner. The current FIFA World Cup is being played in Doha, Qatar and it began on 20 November, 2022 and the final will take place on 18 December, 2022. Over the course of this tournament, 32 teams competed across 64 matches in the 22nd edition of the tournament.
+
+Every time the tournament takes place, it culminates in an exciting finals event that brings soccer fans together for the love of the game and the final this year will take place between France and Argentina and the energy during this game is guaranteed to be unmatched with fans culminating from across the world to support their favorite players or home countries.  
+
+To avoid facing the repercussions  of the extreme climate in Qatar this World Cup is being held in winter months to provide all teams an equal chance of competing and excelling in the prestigious tournament. In addition to the 31 teams that were chosen in the qualification process, the national soccer team of Qatar was automatically chosen to partake in the World Cup. Unfortunately, Qatar lost all three group matches and became the first hosts to lose every game. 
+
+In the first round of the tournament finals, the teams competed in eight groups of four teams to acquire the necessary amount of points to be one of two teams in each group proceeding to the next qualifier round.. These 16 teams advanced to the knockout stage, where three rounds of soccer decided which teams would participate in the final, which resulted in France and Argentina making their way to the top of the ranks. 
+
+In April 2022, FIFA announced the prizes for all participating nations. Each team that qualifies would receive $1.5 million before the competition began so that they could cover preparation costs. Additionally, the prize money for each team was set at $9 million in prize money. This edition's total prize pool is an astounding $440 million, which is $40 million greater than the prize pool of the previous edition that was held in 2018. 
+
+
+
+Objective
+
+Due to the high stakes placed on the winning team of the world cup, fans across the world engage in each game with equal amounts of enthusiasm and often participate in online betting through fantasy soccer and place bets based on their predictions of the upcoming games. There has been an increase in the number of sites and research organizations that are analyzing player and team statistics to create a model that predicts the winner of each match based on different variables. 
+
+We chose this project because everyone, irrespective of their differing understanding or prior knowledge in soccer, across the world is engaged in the world cup and interested in knowing who the winner is going to be and using our prediction model that includes data from the most recent data bases for the top 5 ‘feeder’ leagues into the 32 world cup teams. These feeder leagues include La Liga, Bundesliga, Serie A, Ligue and Premier League. The most recent data available for each of these leagues helped us assess how many players they contribute to the world cup teams. The combination of the most number of players contributed to each team and the success of their respective club teams were our main predictor variables in creating a model to predict the winner of this edition of the world cup.
+
+Methodology
+
+Data used
+The original version of our data can be found at the following link: 
+https://raw.githubusercontent.com/econ122-f22/finalproject-worldcup2022/main/player_stats.csv?token=GHSAT0AAAAAAB4G7YYV55RHDNNQBLIUWZXWY42Z3CA
+
+This data set included 31 predictor variables with 668 observations, it was extremely elaborate and included certain technical aspects that would be more beneficial to a coach or someone professionally involved in the tournament. These variables are also hard to decode until one is extremely proficient at the game or well versed in the rules of soccer. 
+
+For the purposes of this project, we narrowed down to the top five European leagues that have been renowned for their club teams and respective players. These leagues are La Liga, Bundesliga, Premier League, Serie A and the Ligue. We looked at the most recent set of teams that competed within each of these leagues, this data was available on their respective websites under a tab labeled “2022-23 cohort”. Further, we chose these specific leagues because they contribute the most number of players to world cup teams and are amongst the most competitive leagues in their sport.
+
+
+
+```{r warning= FALSE, message=FALSE, message=FALSE, echo=FALSE}
+
+#Creating the frequency bar graphs
+
+graph1 <- ggplot(data= Num10, aes(x= Var1, y= Num10$`# players`, fill = Num10$Var1)) +
+  geom_bar(stat="identity", width=0.5) + labs(title = "# in European Leagues", subtitle = "of top 10 teams with most players in Euro Leagues", x = "Country", y = "# Players", fill = "Country")
+graph1
+
+graph2 <- ggplot(data= LL10, aes(x= Var1, y= LL10$`# LL`, fill = LL10$Var1)) +
+  geom_bar(stat="identity", width=0.5) + labs(title = "# in La Liga", subtitle = "of top 10 teams with most players in La Liga", x = "Country", y = "# Players", fill = "Country")
+graph2
+
+graph3 <- ggplot(data= PL10, aes(x= Var1, y= PL10$`# PL`, fill = PL10$Var1)) +
+  geom_bar(stat="identity", width=0.5) + labs(title = "# in Premier", subtitle = "of top 10 teams with most players in Premier League", x = "Country", y = "# Players", fill = "Country")
+graph3
+
+graph4 <- ggplot(data= BL10, aes(x= Var1, y= BL10$`# BL`, fill = BL10$Var1)) +
+  geom_bar(stat="identity", width=0.5) + labs(title = "# in Bundesliga", subtitle = "of top 10 teams with most players in Bundesliga", x = "Country", y = "# Players", fill = "Country")
+graph4
+
+graph5 <- ggplot(data= SA10, aes(x= Var1, y= SA10$`# SA`, fill = SA10$Var1)) +
+  geom_bar(stat="identity", width=0.5) + labs(title = "# in Serie A", subtitle = "of top 10 teams with most players in Serie A", x = "Country", y = "# Players", fill = "Country")
+graph5
+
+graph6 <- ggplot(data= L10, aes(x= Var1, y= L10$`# L`, fill = L10$Var1)) +
+  geom_bar(stat="identity", width=0.5) + labs(title = "# in Ligue", subtitle = "of top 10 teams with most players in Ligue", x = "Country", y = "# Players", fill = "Country")
+graph6
+```
+Process
+
+From the raw dataset, we filtered it to only contain national teams that only had players in either La Liga, Bundesliga, Premier League, Ligue, or Serie A. From the filtered dataset we then had to add on a column to represent the players’ respective league. This dataset would be used to calculate the eigenvector centrality. The eigen centrality score measures the amount of “influence” a variable contains within the network. In our case with the World Cup. our national teams will represent our nodes and the players from their respective clubs will be the weight of the edges. 
+
+
+Learnings from class
+
+Within our project, we implemented many different techniques used in class, such as: creating bar graphs using ggplot to show the amount of players of each country in the european leagues, Igraph was used to create the network graph and calculate eigen centrality scores. Dplyr methods like piping were used to help organize data frames.
+
+```{r warning= FALSE, message=FALSE, message=FALSE, echo=FALSE}
+#Create Network graph and eigen centrality 
+
+Num5 <- Num10 %>% head(5)
+FIFA5 <- FIFA_players %>% filter(team %in% Num5$Var1)
+
+
+g <- graph.data.frame(FIFA5, directed = FALSE)
+plot(g)
+
+eigen <- data.frame((eigen_centrality(g, directed = FALSE)))
+eigen <- eigen[order(-eigen$vector),]
+eigen <- filter(eigen, rownames(eigen) %!in% c(Premier_League_Teams, Bundesliga_Teams, La_Liga_Teams, Serie_A_Teams, Ligue_Teams))
+
+eigen %>% head(4)
+```
+
+Prediction  
+Our prediction model based off of eigen centrality scores predicted the top 4 teams to be:
+Spain - World Cup Champions
+France - World Cup Runner-up
+Germany - 3rd Place
+Brazil - 4th Place
+
+Conclusion [Anya]
+To conclude, while we were able to curate a model to predict the outcome of the 2022 FIFA Men’s World Cup it must be prefaced that soccer is an extremely volatile sport. It is hard to make accurate predictions about a sport and more so for one like soccer where several last minute occurrences can affect a game. We can never have the most ideal number of variables or account for injuries prior to a game. Further, climate, familiarity with terrain, and luck are of utmost importance when athletes are playing their sport and these tend to vary with nearly every match in a tournament. Therefore, while we believe our model to be a step in the right direction, we also understand that no model can account for all variances and make the most accurate prediction that corresponds to real life outcomes.
